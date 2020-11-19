@@ -13,10 +13,10 @@ void *file_handling(void* arg);
 void printList(fileNode *head){   
     fileNode *ptr=head;   
     while(ptr!=NULL){   
-        printf("%s-->",ptr->path);   
+        printf("\t%s\n",ptr->path);   
         ptr=ptr->next;    
     }
-    printf("\n");
+    //printf("\n");
 }
 
 typedef struct _threadArg {
@@ -32,7 +32,7 @@ void* directory_handling( void* arg ){
         pthread_mutex_t* lock = args->lock;
         fileNode* fileList = args->flist;
         printf("handling dir %s\n", start_path);
-        char new_path[100];
+        //char new_path[100];
         pthread_t threads[100];//change later, dont want this static, should find count of files/dirs first and then allocate that much space
         int threadCount=0;
         struct dirent *pDirent;
@@ -49,9 +49,12 @@ void* directory_handling( void* arg ){
         // Process each entry.
         while ((pDirent = readdir(pDir)) != NULL) {
             if(pDirent->d_type == DT_DIR && pDirent->d_type != DT_REG ){
+                int pathlen = strlen(start_path) + 2 + strlen(pDirent->d_name);
+                char new_path[pathlen];
                 strcpy(new_path, start_path);
                 strcat(new_path, pDirent->d_name);
                 strcat(new_path, "/");
+                new_path[pathlen-1] = '\0';
                 threadArg* threadArgs = (threadArg*)malloc(sizeof(threadArg*));
                 threadArgs->path = new_path;
                 threadArgs->flist = fileList;
@@ -59,23 +62,26 @@ void* directory_handling( void* arg ){
                 //pthread_create(&threads[threadCount++], NULL, directory_handling, (void*)threadArgs);
                 directory_handling(threadArgs);
             }else if(pDirent->d_type == DT_REG){
+                int pathlen = strlen(start_path) + 1 + strlen(pDirent->d_name);
+                char new_path[pathlen];
                 strcpy(new_path, start_path);
                 strcat(new_path, pDirent->d_name);
+                new_path[pathlen-1] = '\0';
                 threadArg* threadArgs = (threadArg*)malloc(sizeof(threadArg*));
                 threadArgs->path = new_path;
                 threadArgs->flist = fileList;
                 threadArgs->lock = lock;
-                // pthread_create(&threads[threadCount++], NULL, file_handling, (void*)threadArgs);
+                //pthread_create(&threads[threadCount++], NULL, file_handling, (void*)threadArgs);
                 file_handling(threadArgs);
             }
         }
         //done spawning threads, join them all
         // int j;
-        // for(j = 0;j <= threadCount; j++){
+        // for(j = 0;j < threadCount; j++){
         //     pthread_join(threads[j] ,NULL);
         // }
         closedir (pDir);
-        return NULL;
+        //return NULL;
         //pthread_exit(NULL);
 }
 // does file_handling
@@ -86,13 +92,13 @@ void *file_handling(void* arg){
     fileNode* fileList = args->flist;
     //initting current file
     fileNode* currentFile = (fileNode*)malloc(sizeof(fileNode));
-    currentFile->path = filePath;
+    strcpy(currentFile->path, filePath);
     currentFile->wordCount = 0;
     currentFile->next = NULL;
     printf("handling file %s\n", currentFile->path);
     pthread_mutex_lock(lock);
     //check if we are the first file in the list
-    if(fileList->path == NULL){
+    if(fileList->path[0] == '\0'){
         *fileList = *currentFile;
     } else {
         //traverse until we find the last file in the list
@@ -115,8 +121,8 @@ int main(int argc,char *argv[]){
         }
         //Beginning of file list
         fileNode* flist = (fileNode*)malloc(sizeof(fileNode));
-        flist->path = NULL;
-        flist->next = NULL;
+        //strcpy(flist->path, "FIRST");
+        //flist->next = NULL;
         //Shared Lock
         pthread_mutex_t* lock = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t));
         pthread_mutex_init(lock, NULL);
@@ -126,10 +132,14 @@ int main(int argc,char *argv[]){
         arg->path = startdir;
         arg->lock = lock;
         arg->flist = flist;
-        // pthread_t mainThread;
-        // pthread_create(&mainThread, NULL, directory_handling, (void*)arg);
-        // pthread_join(mainThread, NULL);
+
+        //pthread_t mainThread;
+        //pthread_create(&mainThread, NULL, directory_handling, (void*)arg);
+        //pthread_join(mainThread, NULL);
+
         directory_handling(arg);
         printList(flist);
+        free(flist);
+        free(lock);
         return 0;
 }
