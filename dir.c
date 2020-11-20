@@ -16,11 +16,10 @@ void printList(fileNode *head){
         printf("\t%s\n",ptr->path);   
         ptr=ptr->next;    
     }
-    //printf("\n");
 }
 
 typedef struct _threadArg {
-    char* path;
+    char path[256];
     pthread_mutex_t* lock;
     fileNode* flist;
 } threadArg;
@@ -32,13 +31,17 @@ void* directory_handling( void* arg ){
         pthread_mutex_t* lock = args->lock;
         fileNode* fileList = args->flist;
         printf("handling dir %s\n", start_path);
-        //char new_path[100];
         pthread_t threads[100];//change later, dont want this static, should find count of files/dirs first and then allocate that much space
         int threadCount=0;
+        
         struct dirent *pDirent;
+        
         DIR *pDir;
+        
         // Ensure we can open directory.
         pDir = opendir (start_path);
+        
+        //printf("dir made it here\n");
         // Reading . and .. directories (throwing them away)
         readdir(pDir);
         readdir(pDir);
@@ -46,6 +49,7 @@ void* directory_handling( void* arg ){
             printf ("Cannot open directory '%s'\n", start_path);
             exit(0);
         }
+        
         // Process each entry.
         while ((pDirent = readdir(pDir)) != NULL) {
             if(pDirent->d_type == DT_DIR && pDirent->d_type != DT_REG ){
@@ -55,34 +59,31 @@ void* directory_handling( void* arg ){
                 strcat(new_path, pDirent->d_name);
                 strcat(new_path, "/");
                 new_path[pathlen-1] = '\0';
-                threadArg* threadArgs = (threadArg*)malloc(sizeof(threadArg*));
-                threadArgs->path = new_path;
+                threadArg* threadArgs = (threadArg*)malloc(sizeof(threadArg));
+                strcpy(threadArgs->path, new_path);
                 threadArgs->flist = fileList;
                 threadArgs->lock = lock;
-                //pthread_create(&threads[threadCount++], NULL, directory_handling, (void*)threadArgs);
-                directory_handling(threadArgs);
+                pthread_create(&threads[threadCount++], NULL, directory_handling, (void*)threadArgs);
             }else if(pDirent->d_type == DT_REG){
                 int pathlen = strlen(start_path) + 1 + strlen(pDirent->d_name);
                 char new_path[pathlen];
                 strcpy(new_path, start_path);
                 strcat(new_path, pDirent->d_name);
                 new_path[pathlen-1] = '\0';
-                threadArg* threadArgs = (threadArg*)malloc(sizeof(threadArg*));
-                threadArgs->path = new_path;
+                threadArg* threadArgs = (threadArg*)malloc(sizeof(threadArg));
+                strcpy(threadArgs->path, new_path);
                 threadArgs->flist = fileList;
                 threadArgs->lock = lock;
-                //pthread_create(&threads[threadCount++], NULL, file_handling, (void*)threadArgs);
-                file_handling(threadArgs);
+                pthread_create(&threads[threadCount++], NULL, file_handling, (void*)threadArgs);
             }
         }
         //done spawning threads, join them all
-        // int j;
-        // for(j = 0;j < threadCount; j++){
-        //     pthread_join(threads[j] ,NULL);
-        // }
+        int j;
+            for(j = 0;j < threadCount; j++){
+                pthread_join(threads[j] ,NULL);
+        }
         closedir (pDir);
-        //return NULL;
-        //pthread_exit(NULL);
+        pthread_exit(NULL);
 }
 // does file_handling
 void *file_handling(void* arg){
@@ -111,7 +112,7 @@ void *file_handling(void* arg){
     pthread_mutex_unlock(lock);
     //now we can read currentFile and add tokens to its wordlist
     return NULL;
-    //pthread_exit(NULL);
+    pthread_exit(NULL);
 }
 
 int main(int argc,char *argv[]){
@@ -121,23 +122,18 @@ int main(int argc,char *argv[]){
         }
         //Beginning of file list
         fileNode* flist = (fileNode*)malloc(sizeof(fileNode));
-        //strcpy(flist->path, "FIRST");
-        //flist->next = NULL;
         //Shared Lock
         pthread_mutex_t* lock = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t));
         pthread_mutex_init(lock, NULL);
         char* startdir = argv[1];
         strcat(startdir, "/");
         threadArg* arg = (threadArg*)malloc(sizeof(threadArg));
-        arg->path = startdir;
+        strcpy(arg->path, startdir);
         arg->lock = lock;
         arg->flist = flist;
-
-        //pthread_t mainThread;
-        //pthread_create(&mainThread, NULL, directory_handling, (void*)arg);
-        //pthread_join(mainThread, NULL);
-
-        directory_handling(arg);
+        pthread_t mainThread;
+        pthread_create(&mainThread, NULL, directory_handling, (void*)arg);
+        pthread_join(mainThread, NULL);
         printList(flist);
         free(flist);
         free(lock);
