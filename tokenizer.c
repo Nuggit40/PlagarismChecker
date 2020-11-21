@@ -49,11 +49,11 @@ void printList(wordNode *head){
     wordNode *ptr=head;   
 
     while(ptr!=NULL){   
-        printf("%s-->",ptr->text);   
+        printf("%s:%d-->",ptr->text,ptr->occurrence);   
         ptr=ptr->next;    
         
     }
-    printf("\n");
+    //printf("\n");
 }
 void end(wordNode *head)
 {
@@ -69,10 +69,12 @@ void end(wordNode *head)
 }
 void word_tok(char *input){
 	char* buff = (char*)malloc(sizeof(char));
-	int i = 0, inputLength = strlen(input);
+    int num_toks=0;
+	int i = 0,  j=0, inputLength = strlen(input);
 	wordNode *ptr=(wordNode *)malloc(sizeof(wordNode *));
 	wordNode *head=(wordNode *)malloc(sizeof(wordNode *));
 	wordNode *headOG=(wordNode *)malloc(sizeof(wordNode *));
+    fileNode *currFile=(fileNode *)malloc(sizeof(fileNode *));
 	while( i < inputLength){
 		while(isspace(input[i]) || input[i]=='\n' && i < inputLength){
 			i++;
@@ -82,15 +84,36 @@ void word_tok(char *input){
 		}
 		if(isalnum(input[i])){
 			strcpy(buff, "");
-			while(isalnum(input[i]) || input[i] == '-'){
+			while(isalnum(input[i]) || input[i] == '-' && input[i]!=' '){
 				strncat(buff, input + i, 1);
 				i++;
-			}
+			} 
 		}
-        head=newNode(buff,1); 
-        end(head);
-        printList(head);
-	}
+         ptr=newNode(buff,1);
+         
+         currFile->wordList=ptr;
+         num_toks++;
+         currFile->wordCount=num_toks;
+        if(currFile->wordList == ptr){
+             j++;
+             ptr->occurrence= j;
+         }else {
+          //traverse until we find the last file in the list
+          fileNode* last ;
+        while(last->next != NULL){
+            last = last->next;
+        }
+        last->next = currFile;
+    }
+        printList(ptr);
+          
+
+    }
+    printf("\nNumber of tokens: %d\n", currFile->wordCount);
+    
+    
+        
+	
 }
 
 int main(int argc, char **argv){
@@ -100,4 +123,5 @@ int main(int argc, char **argv){
  
 }
 
+   
    
