@@ -8,7 +8,7 @@
 #include "fileList.h"
 #include <ctype.h>
 
-
+// reads file in and sets it to a buffer
 char* readInFile(char* fileName)
 {
    char* buffer = (char* )(malloc(sizeof(char)));
@@ -38,6 +38,7 @@ char* readInFile(char* fileName)
     char*dne = "DNE\0";
     return dne;
 }
+//creates a newNode of type wordNode * to be added to the linked list
 wordNode* newNode(char* value, int i){   
     wordNode *res=malloc(sizeof(wordNode)); 
     res->text=value;   
@@ -45,6 +46,7 @@ wordNode* newNode(char* value, int i){
 	res->next=NULL;
     return res;
 }
+//prints out the linked list, for testing pruposes
 void printList(wordNode *head){   
     wordNode *ptr=head;   
 
@@ -55,18 +57,6 @@ void printList(wordNode *head){
     }
     //printf("\n");
 }
-void end(wordNode *head)
-{
-    wordNode *p,*q;
-    p=malloc(sizeof(wordNode));
-    p->next=NULL;
-    q=head;
-    while(q->next!=NULL)
-    {
-        q = q->next;
-    }
-    q->next = p;
-}
 void word_tok(char *input){
 	char* buff = (char*)malloc(sizeof(char));
     int num_toks=0;
@@ -76,12 +66,14 @@ void word_tok(char *input){
 	wordNode *headOG=(wordNode *)malloc(sizeof(wordNode *));
     fileNode *currFile=(fileNode *)malloc(sizeof(fileNode *));
 	while( i < inputLength){
+        //if it finds a white space or a new line it goes to the next char
 		while(isspace(input[i]) || input[i]=='\n' && i < inputLength){
 			i++;
 		}
 		if (i >= inputLength){
 			break;
 		}
+        //if its an alphanumeric it adds it to the buffer
 		if(isalnum(input[i])){
 			strcpy(buff, "");
 			while(isalnum(input[i]) || input[i] == '-' && input[i]!=' '){
@@ -89,11 +81,13 @@ void word_tok(char *input){
 				i++;
 			} 
 		}
+        //creates a new node every time a alphanumeric is tokenized
          ptr=newNode(buff,1);
-         
+         //adds the pointer to the word list
          currFile->wordList=ptr;
          num_toks++;
          currFile->wordCount=num_toks;
+         //tries to compare the ptr to wordList (DOESN"T WORK)
         if(currFile->wordList == ptr){
              j++;
              ptr->occurrence= j;
@@ -123,5 +117,4 @@ int main(int argc, char **argv){
  
 }
 
-   
    
