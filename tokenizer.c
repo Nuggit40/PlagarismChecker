@@ -88,16 +88,14 @@ void word_tok(char *input){
          num_toks++;
          currFile->wordCount=num_toks;
          //tries to compare the ptr to wordList (DOESN"T WORK)
-        if(currFile->wordList->text == ptr->text){
-                    j++;
-                    ptr->occurrence= 1;
-         }else{
-          //traverse until we find the last node in the list
-          fileNode* last;
-        while(last->next != NULL){
-            last = last->next;
-        }
-        last->next = currFile;
+         while(currFile->wordList!=NULL){
+             printf("%s\n",currFile->wordList->text);
+            if(currFile->wordList->text == ptr->text){
+                    printf("%s --- %s \n",currFile->wordList->text,ptr->text);
+                        j++;
+                        ptr->occurrence= 1;
+            }
+            currFile=currFile->next;
          }
     
         printList(ptr);
@@ -118,5 +116,4 @@ int main(int argc, char **argv){
  
 }
 
-   
    
