@@ -82,23 +82,24 @@ void word_tok(char *input){
 			} 
 		}
         //creates a new node every time a alphanumeric is tokenized
-         ptr=newNode(buff,1);
+         ptr=newNode(buff,0);
          //adds the pointer to the word list
          currFile->wordList=ptr;
          num_toks++;
          currFile->wordCount=num_toks;
          //tries to compare the ptr to wordList (DOESN"T WORK)
-        if(currFile->wordList == ptr){
-             j++;
-             ptr->occurrence= j;
-         }else {
-          //traverse until we find the last file in the list
-          fileNode* last ;
+        if(currFile->wordList->text == ptr->text){
+                    j++;
+                    ptr->occurrence= 1;
+         }else{
+          //traverse until we find the last node in the list
+          fileNode* last;
         while(last->next != NULL){
             last = last->next;
         }
         last->next = currFile;
-    }
+         }
+    
         printList(ptr);
           
 
@@ -117,4 +118,5 @@ int main(int argc, char **argv){
  
 }
 
+   
    
