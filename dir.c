@@ -127,7 +127,7 @@ void printList(fileNode *head){
             //print out wordlist
             wordNode* wn = ptr->wordList;
                 while(wn != NULL){
-                    printf("\t\t%s\toccurrances:%d\n", wn->text, wn->occurrence);
+                    printf("\t\t%s\toccurrances:%d\tprob:%f\n", wn->text, wn->occurrence, wn->probability);
                     wn = wn->next;
                 }
             ptr=ptr->next;    
@@ -198,6 +198,15 @@ void* directory_handling( void* arg ){
         // return(NULL);
         pthread_exit(NULL);
 }
+//fills in probabilities for each work to occur on a file
+void addProbabilities(fileNode* currentFile){
+    wordNode* curWord = currentFile->wordList;
+    while(curWord != NULL){
+        curWord->probability = ((float)curWord->occurrence / (float)currentFile->wordCount);
+        curWord = curWord->next;
+    }
+}
+
 // does file_handling
 void *file_handling(void* arg){
     threadArg* args = (threadArg*)arg;
@@ -210,23 +219,20 @@ void *file_handling(void* arg){
     currentFile->wordCount = 0;
     currentFile->next = NULL;
     currentFile->wordList = NULL;
-    
-    fileNode* cur = currentFile;
-    //printf("handling file %s\n", currentFile->path);
+    //critical section, adding to main file list
     pthread_mutex_lock(lock);
-    
     //traverse until we find the last file in the list
     fileNode* last = fileList;
     while(last->next != NULL){
         last = last->next;
     }
     last->next = currentFile;
-    
     pthread_mutex_unlock(lock);
-
-    char* fileContent = readInFile(cur);
+    //end of critical section
+    char* fileContent = readInFile(currentFile);
     if(fileContent != "DNE\0"){
-        word_tok(fileContent, cur);
+        word_tok(fileContent, currentFile);
+        addProbabilities(currentFile);
     }
     pthread_exit(NULL);
 }
