@@ -6,15 +6,134 @@
 #include <string.h>
 #include <pthread.h>
 #include "fileList.h"
+#include <ctype.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
+void* file_handling(void* arg);
+void* directory_handling(void* arg);
+void printList(fileNode* head); 
 
-void *file_handling(void* arg);
+// reads file in and sets it to a buffer
+char* readInFile(fileNode* file)
+{
+    char* fileName = file->path;
+    char* buffer = (char* )(malloc(sizeof(char)));
+    buffer[0] = '\0';
+    char c;
+    int fd = open(fileName,O_RDONLY);
+    //printf("%s\n", strerror(errno));
+    int status;
+    int counter = 0;
+    if (fd!=-1){
+        do{
+                status =  read(fd, &c, 1);
+                if (status<=0){
+                    break;
+                }
+                else{   
+                    int len = strlen(buffer);
+                    buffer =  realloc(buffer,(len+ 2)*sizeof(char));
+                    buffer[len] = c;
+                    buffer[len+1] = '\0';
+                }
+            }while(status >0);
+            close(fd);
+        return buffer; 
+    }
+    printf("Cannot open the file / File was deleted\n");
+    char*dne = "DNE\0";
+    return dne;
+}
+
+void word_tok(char *input, fileNode* currentFile){
+    int num_toks = 0;
+    int index = 0;
+    //convert all lowercase letters to uppercase
+    while(index < strlen(input)){
+        if(isalpha(input[index])){
+            input[index] = toupper(input[index]);
+        }
+        ++index;
+    }
+    index = 0;
+    while(index < strlen(input)){
+        int startIndex = index;
+        int endIndex = index;
+        //skips whitespace and punctuation
+        if((isspace(input[index]) || (ispunct(input[index])) && input[index] != '-') || isdigit(input[index])){
+            ++index;
+            continue;
+        }
+        char* c = input + startIndex;
+        //while reading valid word chars
+        while(isalpha(input[endIndex]) || input[endIndex] == '-'){
+            ++endIndex;
+        }
+        //copying the array contents into curWord->txt
+        int tokenLength = endIndex - startIndex;
+        char* str = (char*)malloc(sizeof(char)*tokenLength + 1);
+        memcpy(str, &input[startIndex], tokenLength);
+        str[tokenLength] = '\0';
+        wordNode* curWord = (wordNode*)malloc(sizeof(wordNode));
+        memcpy(curWord->text, str, tokenLength+1);
+        free(str);
+
+        //if the wordlist is empty then this is the first entry
+        if(currentFile->wordList == NULL){
+            //printf("%s is the first entry\n", curWord->text);
+            currentFile->wordList = curWord;
+            curWord->occurrence = 1;
+            curWord->next = NULL;
+            ++num_toks;
+        } else {
+            wordNode* c = currentFile->wordList;
+            while(c->next != NULL){
+                if(strcmp(curWord->text, c->text) == 0){
+                    c->occurrence++;
+                    free(curWord);
+                    break;
+                }
+                c = c->next;
+            }
+            if(c->next == NULL){
+               if(strcmp(curWord->text, c->text) == 0){
+                    c->occurrence++;
+                    free(curWord);
+                } else {
+                    c->next = curWord;
+                    curWord->next = NULL;
+                    curWord->occurrence = 1;
+                    ++num_toks;
+                }
+            }
+        }
+        currentFile->wordCount = num_toks;
+        //printf("num toks for %s:%d\n", currentFile->path, num_toks);
+        //printf("startindex:%d\tendIndex:%d\t\n",startIndex,endIndex);
+        //printf("tokenlength of %s:%d\n", currentFile->path,tokenLength);
+        //printf("token is: %s\n", curWord->text);
+        index += tokenLength;
+    }
+}
 
 //prints out linked list
 void printList(fileNode *head){   
-    fileNode *ptr=head;   
-    while(ptr!=NULL){   
-        printf("\t%s\n",ptr->path);   
-        ptr=ptr->next;    
+    fileNode *ptr=head;
+    if(ptr != NULL){
+        while(ptr != NULL){   
+            printf("\t%s\t%d\n",ptr->path, ptr->wordCount);
+            //print out wordlist
+            wordNode* wn = ptr->wordList;
+            if(wn != NULL){
+                while(wn != NULL){
+                    printf("\t\t%s\t%d\n", wn->text, wn->occurrence);
+                    wn = wn->next;
+                }
+            }
+            ptr=ptr->next;    
+        }
     }
 }
 
@@ -30,18 +149,13 @@ void* directory_handling( void* arg ){
         char* start_path = args->path;
         pthread_mutex_t* lock = args->lock;
         fileNode* fileList = args->flist;
-        printf("handling dir %s\n", start_path);
+        //printf("handling dir %s\n", start_path);
         pthread_t threads[100];//change later, dont want this static, should find count of files/dirs first and then allocate that much space
         int threadCount=0;
-        
         struct dirent *pDirent;
-        
         DIR *pDir;
-        
         // Ensure we can open directory.
         pDir = opendir (start_path);
-        
-        //printf("dir made it here\n");
         // Reading . and .. directories (throwing them away)
         readdir(pDir);
         readdir(pDir);
@@ -49,7 +163,6 @@ void* directory_handling( void* arg ){
             printf ("Cannot open directory '%s'\n", start_path);
             exit(0);
         }
-        
         // Process each entry.
         while ((pDirent = readdir(pDir)) != NULL) {
             if(pDirent->d_type == DT_DIR && pDirent->d_type != DT_REG ){
@@ -64,6 +177,7 @@ void* directory_handling( void* arg ){
                 threadArgs->flist = fileList;
                 threadArgs->lock = lock;
                 pthread_create(&threads[threadCount++], NULL, directory_handling, (void*)threadArgs);
+                //directory_handling(threadArgs);
             }else if(pDirent->d_type == DT_REG){
                 int pathlen = strlen(start_path) + 1 + strlen(pDirent->d_name);
                 char new_path[pathlen];
@@ -75,14 +189,16 @@ void* directory_handling( void* arg ){
                 threadArgs->flist = fileList;
                 threadArgs->lock = lock;
                 pthread_create(&threads[threadCount++], NULL, file_handling, (void*)threadArgs);
+                // file_handling(threadArgs);
             }
         }
-        //done spawning threads, join them all
+        // done spawning threads, join them all
         int j;
             for(j = 0;j < threadCount; j++){
                 pthread_join(threads[j] ,NULL);
         }
         closedir (pDir);
+        // return(NULL);
         pthread_exit(NULL);
 }
 // does file_handling
@@ -96,7 +212,8 @@ void *file_handling(void* arg){
     strcpy(currentFile->path, filePath);
     currentFile->wordCount = 0;
     currentFile->next = NULL;
-    printf("handling file %s\n", currentFile->path);
+    currentFile->wordList = NULL;
+    //printf("handling file %s\n", currentFile->path);
     pthread_mutex_lock(lock);
     //check if we are the first file in the list
     if(fileList->path[0] == '\0'){
@@ -111,7 +228,12 @@ void *file_handling(void* arg){
     }
     pthread_mutex_unlock(lock);
     //now we can read currentFile and add tokens to its wordlist
-    return NULL;
+    char* fileContent = readInFile(currentFile);
+    
+    word_tok(fileContent, currentFile);
+    //printf("content of %s: %s\n", currentFile->path, fileContent);
+    
+    //return NULL;
     pthread_exit(NULL);
 }
 
@@ -134,6 +256,7 @@ int main(int argc,char *argv[]){
         pthread_t mainThread;
         pthread_create(&mainThread, NULL, directory_handling, (void*)arg);
         pthread_join(mainThread, NULL);
+        // directory_handling(arg);
         printList(flist);
         free(flist);
         free(lock);
