@@ -47,10 +47,13 @@ char* readInFile(fileNode* file)
     return dne;
 }
 
+void swapWordData(wordNode* word1, wordNode* word2){
+
+}
+
 void word_tok(char *input, fileNode* currentFile){
     int num_toks = 0;
     int index = 0;
-    //printf("tokenizing:%s\n", currentFile->path);
     //convert all uppercase letters to lowercase
     while(index < strlen(input)){
         if(isalpha(input[index])){
@@ -84,7 +87,6 @@ void word_tok(char *input, fileNode* currentFile){
         ++num_toks;
         //if the wordlist is empty then this is the first entry
         if(currentFile->wordList == NULL){
-            //printf("%s is the first entry\n", curWord->text);
             currentFile->wordList = curWord;
             curWord->occurrence = 1;
             curWord->next = NULL;
@@ -93,12 +95,13 @@ void word_tok(char *input, fileNode* currentFile){
             while(c->next != NULL){
                 //if the current token is in the list, free the current token and increment the existing word's occurrence
                 if(strcmp(curWord->text, c->text) == 0){
-                    c->occurrence++;
+                    ++c->occurrence;
                     free(curWord);
                     break;
                 }
                 c = c->next;
             }
+            //checking the last element in the list
             if(c->next == NULL){
                if(strcmp(curWord->text, c->text) == 0){
                     c->occurrence++;
@@ -110,13 +113,9 @@ void word_tok(char *input, fileNode* currentFile){
                 }
             }
         }
-        currentFile->wordCount = num_toks;
-        //printf("num toks for %s:%d\n", currentFile->path, num_toks);
-        //printf("startindex:%d\tendIndex:%d\t\n",startIndex,endIndex);
-        //printf("tokenlength of %s:%d\n", currentFile->path,tokenLength);
-        //printf("token is: %s\n", curWord->text);
         index += tokenLength;
     }
+    currentFile->wordCount = num_toks;
 }
 
 //prints out linked list
@@ -237,6 +236,25 @@ void *file_handling(void* arg){
     }
     pthread_exit(NULL);
 }
+//frees the filelist and each file's words
+void cleanList(fileNode* fileList){
+    //first element is NULL and gets freed at a later point
+    fileNode* currentFile = fileList->next;
+    while(currentFile != NULL){
+        //free the wordlist of the current file
+        wordNode* currentWord = currentFile->wordList;
+        while(currentWord != NULL){
+            wordNode* prev = currentWord;
+            currentWord = currentWord->next;
+            free(prev);
+        }
+        free(currentWord);
+
+        fileNode* prevFile = currentFile;
+        currentFile = currentFile->next;
+        free(prevFile);
+    }
+}
 
 int main(int argc,char *argv[]){
         if (argc != 2) {
@@ -258,7 +276,10 @@ int main(int argc,char *argv[]){
         pthread_create(&mainThread, NULL, directory_handling, (void*)arg);
         pthread_join(mainThread, NULL);
         printList(flist);
+
+        cleanList(flist);
         free(flist);
         free(lock);
+        
         return 0;
 }
