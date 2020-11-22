@@ -7,14 +7,25 @@
 #include <stdlib.h>
 #include "fileList.h"
 #include <ctype.h>
+#include <errno.h>
 
-
-char* readInFile(char* fileName)
+void func(fileNode* f){
+    wordNode* wn = f->wordList;
+    if(wn != NULL){
+        while(wn != NULL){
+            printf("%s\t%d\n", wn->text, wn->occurrence);
+            wn = wn->next;
+        }
+    }
+}
+char* readInFile(fileNode* file)
 {
-   char* buffer = (char* )(malloc(sizeof(char)));
-   buffer[0] = '\0';
+    char* fileName = file->path;
+    char* buffer = (char* )(malloc(sizeof(char)));
+    buffer[0] = '\0';
     char c;
     int fd = open(fileName,O_RDONLY);
+    //printf("%s\n", strerror(errno));
     int status;
     int counter = 0;
     if (fd!=-1){
@@ -30,7 +41,6 @@ char* readInFile(char* fileName)
                     buffer[len+1] = '\0';
                 }
             }while(status >0);
-         
             close(fd);
         return buffer; 
     }
@@ -38,66 +48,83 @@ char* readInFile(char* fileName)
     char*dne = "DNE\0";
     return dne;
 }
-wordNode* newNode(char* value, int i){   
-    wordNode *res=malloc(sizeof(wordNode)); 
-    res->text=value;   
-    res->occurrence=i;
-	res->next=NULL;
-    return res;
-}
-void printList(wordNode *head){   
-    wordNode *ptr=head;   
 
-    while(ptr!=NULL){   
-        printf("%s-->",ptr->text);   
-        ptr=ptr->next;    
-        
-    }
-    printf("\n");
-}
-void end(wordNode *head)
-{
-    wordNode *p,*q;
-    p=malloc(sizeof(wordNode));
-    p->next=NULL;
-    q=head;
-    while(q->next!=NULL)
-    {
-        q = q->next;
-    }
-    q->next = p;
-}
-void word_tok(char *input){
-	char* buff = (char*)malloc(sizeof(char));
-	int i = 0, inputLength = strlen(input);
-	wordNode *ptr=(wordNode *)malloc(sizeof(wordNode *));
-	wordNode *head=(wordNode *)malloc(sizeof(wordNode *));
-	wordNode *headOG=(wordNode *)malloc(sizeof(wordNode *));
-	while( i < inputLength){
-		while(isspace(input[i]) || input[i]=='\n' && i < inputLength){
-			i++;
-		}
-		if (i >= inputLength){
-			break;
-		}
-		if(isalnum(input[i])){
-			strcpy(buff, "");
-			while(isalnum(input[i]) || input[i] == '-'){
-				strncat(buff, input + i, 1);
-				i++;
-			}
-		}
-        head=newNode(buff,1); 
-        end(head);
-        printList(head);
-	}
-}
 
+
+void word_tok(char *input, fileNode* currentFile){
+    //input = "hello hello hi hi";
+    int num_toks = 0;
+    int index = 0;
+    //convert all lowercase letters to uppercase
+    while(index < strlen(input)){
+        if(isalpha(input[index])){
+            input[index] = toupper(input[index]);
+        }
+        ++index;
+    }
+    index = 0;
+    while(index < strlen(input)){
+        int startIndex = index;
+        int endIndex = index;
+        //skips whitespace and punctuation
+        if((isspace(input[index]) || ispunct(input[index])) && input[index] != '-'){
+            ++index;
+            continue;
+        }
+        char* c = input + startIndex;
+        //while reading valid word chars
+        while(isalpha(input[endIndex]) || input[endIndex] == '-'){
+            ++endIndex;
+        }
+        //copying the array contents into curWord->txt
+        int tokenLength = endIndex - startIndex;
+        char* str = (char*)malloc(sizeof(char)*tokenLength + 1);
+        memcpy(str, &input[startIndex], tokenLength);
+        str[tokenLength] = '\0';
+        wordNode* curWord = (wordNode*)malloc(sizeof(wordNode));
+        memcpy(curWord->text, str, tokenLength+1);
+        free(str);
+
+        //if the wordlist is empty then this is the first entry
+        if(currentFile->wordList == NULL){
+            //printf("%s is the first entry\n", curWord->text);
+            currentFile->wordList = curWord;
+            curWord->occurrence = 1;
+            curWord->next = NULL;
+        } else {
+            wordNode* c = currentFile->wordList;
+            while(c->next != NULL){
+                if(strcmp(curWord->text, c->text) == 0){
+                    c->occurrence++;
+                    free(curWord);
+                    break;
+                }
+                c = c->next;
+            }
+            if(c->next == NULL){
+               if(strcmp(curWord->text, c->text) == 0){
+                    c->occurrence++;
+                    free(curWord);
+                } else {
+                    c->next = curWord;
+                    curWord->occurrence = 1;
+                }
+            }
+        }
+        //printf("startindex:%d\tendIndex:%d\t\n",startIndex,endIndex);
+        //printf("tokenlength of %s:%d\n", currentFile->path,tokenLength);
+        //printf("token is: %s\n", curWord->text);
+        index += tokenLength;
+    }
+}
 int main(int argc, char **argv){
-	char* f = (char*)malloc(sizeof(char));
-    f=readInFile(argv[1]);
-	word_tok(f);
- 
+	fileNode* fnode;
+    strcpy(fnode->path, "testdir/a.txt");
+    //printf("%s\n", strerror(errno));
+    char* buff = readInFile(fnode);
+    //printf("%s\n", buff);
+	word_tok(buff, fnode);
+    func(fnode);
 }
 
    
