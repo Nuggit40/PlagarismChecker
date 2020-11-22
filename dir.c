@@ -116,26 +116,22 @@ void word_tok(char *input, fileNode* currentFile){
         //printf("token is: %s\n", curWord->text);
         index += tokenLength;
     }
-    printf("token count for %s:%d\n",currentFile->path ,num_toks);
 }
 
 //prints out linked list
 void printList(fileNode *head){   
-    fileNode *ptr=head;
-    //if(ptr != NULL){
+    //first entry in the list is NULL
+    fileNode *ptr=head->next;
         while(ptr != NULL){   
             printf("\t%s\ttotal tokens:%d\n",ptr->path, ptr->wordCount);
             //print out wordlist
             wordNode* wn = ptr->wordList;
-            //if(wn != NULL){
                 while(wn != NULL){
                     printf("\t\t%s\toccurrances:%d\n", wn->text, wn->occurrence);
                     wn = wn->next;
                 }
-            //}
             ptr=ptr->next;    
         }
-    //}
 }
 
 typedef struct _threadArg {
@@ -214,24 +210,23 @@ void *file_handling(void* arg){
     currentFile->wordCount = 0;
     currentFile->next = NULL;
     currentFile->wordList = NULL;
+    
+    fileNode* cur = currentFile;
     //printf("handling file %s\n", currentFile->path);
     pthread_mutex_lock(lock);
-    //check if we are the first file in the list
-    if(fileList->path[0] == '\0'){
-        *fileList = *currentFile;
-    } else {
-        //traverse until we find the last file in the list
-        fileNode* last = fileList;
-        while(last->next != NULL){
-            last = last->next;
-        }
-        last->next = currentFile;
-    }
-    pthread_mutex_unlock(lock);
     
-    char* fileContent = readInFile(currentFile);
+    //traverse until we find the last file in the list
+    fileNode* last = fileList;
+    while(last->next != NULL){
+        last = last->next;
+    }
+    last->next = currentFile;
+    
+    pthread_mutex_unlock(lock);
+
+    char* fileContent = readInFile(cur);
     if(fileContent != "DNE\0"){
-        word_tok(fileContent, currentFile);
+        word_tok(fileContent, cur);
     }
     pthread_exit(NULL);
 }
@@ -255,7 +250,6 @@ int main(int argc,char *argv[]){
         pthread_t mainThread;
         pthread_create(&mainThread, NULL, directory_handling, (void*)arg);
         pthread_join(mainThread, NULL);
-        // directory_handling(arg);
         printList(flist);
         free(flist);
         free(lock);
