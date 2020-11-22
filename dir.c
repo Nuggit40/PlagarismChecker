@@ -42,7 +42,7 @@ char* readInFile(fileNode* file)
             close(fd);
         return buffer; 
     }
-    printf("Cannot open the file / File was deleted\n");
+    printf("Cannot open the file %s\n", fileName);
     char*dne = "DNE\0";
     return dne;
 }
