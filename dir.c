@@ -51,10 +51,10 @@ void word_tok(char *input, fileNode* currentFile){
     int num_toks = 0;
     int index = 0;
     //printf("tokenizing:%s\n", currentFile->path);
-    //convert all lowercase letters to uppercase
+    //convert all uppercase letters to lowercase
     while(index < strlen(input)){
         if(isalpha(input[index])){
-            input[index] = toupper(input[index]);
+            input[index] = tolower(input[index]);
         }
         ++index;
     }
@@ -91,6 +91,7 @@ void word_tok(char *input, fileNode* currentFile){
         } else {
             wordNode* c = currentFile->wordList;
             while(c->next != NULL){
+                //if the current token is in the list, free the current token and increment the existing word's occurrence
                 if(strcmp(curWord->text, c->text) == 0){
                     c->occurrence++;
                     free(curWord);
