@@ -50,6 +50,7 @@ char* readInFile(fileNode* file)
 void word_tok(char *input, fileNode* currentFile){
     int num_toks = 0;
     int index = 0;
+    //printf("tokenizing:%s\n", currentFile->path);
     //convert all lowercase letters to uppercase
     while(index < strlen(input)){
         if(isalpha(input[index])){
@@ -79,14 +80,14 @@ void word_tok(char *input, fileNode* currentFile){
         wordNode* curWord = (wordNode*)malloc(sizeof(wordNode));
         memcpy(curWord->text, str, tokenLength+1);
         free(str);
-
+        
+        ++num_toks;
         //if the wordlist is empty then this is the first entry
         if(currentFile->wordList == NULL){
             //printf("%s is the first entry\n", curWord->text);
             currentFile->wordList = curWord;
             curWord->occurrence = 1;
             curWord->next = NULL;
-            ++num_toks;
         } else {
             wordNode* c = currentFile->wordList;
             while(c->next != NULL){
@@ -105,7 +106,6 @@ void word_tok(char *input, fileNode* currentFile){
                     c->next = curWord;
                     curWord->next = NULL;
                     curWord->occurrence = 1;
-                    ++num_toks;
                 }
             }
         }
@@ -116,25 +116,26 @@ void word_tok(char *input, fileNode* currentFile){
         //printf("token is: %s\n", curWord->text);
         index += tokenLength;
     }
+    printf("token count for %s:%d\n",currentFile->path ,num_toks);
 }
 
 //prints out linked list
 void printList(fileNode *head){   
     fileNode *ptr=head;
-    if(ptr != NULL){
+    //if(ptr != NULL){
         while(ptr != NULL){   
-            printf("\t%s\t%d\n",ptr->path, ptr->wordCount);
+            printf("\t%s\ttotal tokens:%d\n",ptr->path, ptr->wordCount);
             //print out wordlist
             wordNode* wn = ptr->wordList;
-            if(wn != NULL){
+            //if(wn != NULL){
                 while(wn != NULL){
-                    printf("\t\t%s\t%d\n", wn->text, wn->occurrence);
+                    printf("\t\t%s\toccurrances:%d\n", wn->text, wn->occurrence);
                     wn = wn->next;
                 }
-            }
+            //}
             ptr=ptr->next;    
         }
-    }
+    //}
 }
 
 typedef struct _threadArg {
@@ -229,10 +230,10 @@ void *file_handling(void* arg){
     pthread_mutex_unlock(lock);
     //now we can read currentFile and add tokens to its wordlist
     char* fileContent = readInFile(currentFile);
-    
+    //printf("fileContent of %s:%s\n", currentFile->path, fileContent);
     word_tok(fileContent, currentFile);
     //printf("content of %s: %s\n", currentFile->path, fileContent);
-    
+    //printf("wc of %s:%d\n", currentFile->path, currentFile->wordCount);
     //return NULL;
     pthread_exit(NULL);
 }
