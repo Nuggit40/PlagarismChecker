@@ -228,13 +228,11 @@ void *file_handling(void* arg){
         last->next = currentFile;
     }
     pthread_mutex_unlock(lock);
-    //now we can read currentFile and add tokens to its wordlist
+    
     char* fileContent = readInFile(currentFile);
-    //printf("fileContent of %s:%s\n", currentFile->path, fileContent);
-    word_tok(fileContent, currentFile);
-    //printf("content of %s: %s\n", currentFile->path, fileContent);
-    //printf("wc of %s:%d\n", currentFile->path, currentFile->wordCount);
-    //return NULL;
+    if(fileContent != "DNE\0"){
+        word_tok(fileContent, currentFile);
+    }
     pthread_exit(NULL);
 }
 
