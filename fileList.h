@@ -16,4 +16,10 @@ typedef struct _fileNode {
     float kld;
 } fileNode;
 
+typedef struct _meanConstruction {
+    char* text;
+    double mean;
+    struct _meanConstruction* next;
+} meanConstruction;
+
 #endif
