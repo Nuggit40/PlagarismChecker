@@ -2,14 +2,14 @@
 #define FILELIST_H
 
 typedef struct _wordNode {
-    char text[50];
+    char* text;
     int occurrence;
     float probability;
     struct _wordNode* next;
 } wordNode;
 
 typedef struct _fileNode {
-    char path[256];
+    char* path;
     int wordCount;
     struct _fileNode* next;
     wordNode* wordList;

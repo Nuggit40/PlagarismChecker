@@ -15,6 +15,44 @@ void* file_handling(void* arg);
 void* directory_handling(void* arg);
 void printList(fileNode* head); 
 
+wordNode* makeWord(char* token){
+    wordNode* newWord = (wordNode*)malloc(sizeof(wordNode));
+    newWord->occurrence = 1;
+    char* wtext = (char*)malloc(sizeof(char) * strlen(token) + 1);
+    strcpy(wtext, token);
+    newWord->text = wtext;
+    newWord->next = NULL;
+    return newWord;
+}
+
+void addToken(fileNode* file, char* token){
+    //discard empty tokens or tokens containing only spaces
+    if (isspace(token[0]) || token[0] == '\0') return;
+    ++file->wordCount;
+    if(file->wordList == NULL){
+        //first word
+        file->wordList = makeWord(token);
+    } else {
+        wordNode* last = file->wordList;
+        while(last->next != NULL){
+            if(strcmp(last->text, token) == 0){
+                ++last->occurrence;
+                break;
+            } else {
+                last = last->next;
+            }
+        }
+        if(last->next == NULL){
+            if(strcmp(last->text, token) == 0){
+                ++last->occurrence;
+            } else {
+                last->next = makeWord(token);
+            }
+        }
+        
+    }
+}
+
 // reads file in and sets it to a buffer
 char* readInFile(fileNode* file)
 {
@@ -26,95 +64,45 @@ char* readInFile(fileNode* file)
     int fileSize = lseek(fd, 0, SEEK_END);
     //setting cursor to start of file
     lseek(fd, 0, SEEK_SET);
-    char* buffer = (char*)malloc(sizeof(char) * fileSize);
+    char buffer[100];
+    buffer[0] = '\0';
+    char c;
     int status;
-    int offset = 0;
+    int wordLen = 0;
+    int charCount = 0;
     do {
-        status = read(fd, buffer + offset, fileSize - offset);
-        if(status > 0 && status < fileSize){
-            offset += status;
+        status = read(fd, &c, 1);
+        if(status > 0){
+            ++charCount;
+            //make all chars lowercase
+            c = tolower(c);
+            //add the character to the current buffer
+            buffer[wordLen] = c;
+            buffer[wordLen + 1] = '\0';
+            ++wordLen;
+            //printf("buffer currently:'%s'\n", buffer);
+            //if the character is a space then then token has ended and we process the token
+            if(isspace(c) || isdigit(c) || charCount == fileSize){
+                //discard the char that terminated the word
+                if(isspace(c) || isdigit(c)){
+                    buffer[wordLen-1] = '\0';
+                }
+                addToken(file, buffer);
+                //prepare for the next word
+                wordLen = 0;
+                buffer[0] = '\0';
+                
+            }
         }
-
     } while (status > 0);
     close(fd);
-    return buffer;
-}
-
-void swapWordData(wordNode* word1, wordNode* word2){
-
-}
-
-void word_tok(char *input, fileNode* currentFile){
-    int num_toks = 0;
-    int index = 0;
-    //convert all uppercase letters to lowercase
-    while(index < strlen(input)){
-        if(isalpha(input[index])){
-            input[index] = tolower(input[index]);
-        }
-        ++index;
-    }
-    index = 0;
-    while(index < strlen(input)){
-        int startIndex = index;
-        int endIndex = index;
-        //skips whitespace and punctuation
-        if((isspace(input[index]) || (ispunct(input[index])) && input[index] != '-') || isdigit(input[index])){
-            ++index;
-            continue;
-        }
-        char* c = input + startIndex;
-        //while reading valid word chars
-        while(isalpha(input[endIndex]) || input[endIndex] == '-'){
-            ++endIndex;
-        }
-        //copying the array contents into curWord->txt
-        int tokenLength = endIndex - startIndex;
-        char* str = (char*)malloc(sizeof(char)*tokenLength + 1);
-        memcpy(str, &input[startIndex], tokenLength);
-        str[tokenLength] = '\0';
-        wordNode* curWord = (wordNode*)malloc(sizeof(wordNode));
-        memcpy(curWord->text, str, tokenLength+1);
-        free(str);
-        
-        ++num_toks;
-        //if the wordlist is empty then this is the first entry
-        if(currentFile->wordList == NULL){
-            currentFile->wordList = curWord;
-            curWord->occurrence = 1;
-            curWord->next = NULL;
-        } else {
-            wordNode* c = currentFile->wordList;
-            while(c->next != NULL){
-                //if the current token is in the list, free the current token and increment the existing word's occurrence
-                if(strcmp(curWord->text, c->text) == 0){
-                    ++c->occurrence;
-                    free(curWord);
-                    break;
-                }
-                c = c->next;
-            }
-            //checking the last element in the list
-            if(c->next == NULL){
-               if(strcmp(curWord->text, c->text) == 0){
-                    c->occurrence++;
-                    free(curWord);
-                } else {
-                    c->next = curWord;
-                    curWord->next = NULL;
-                    curWord->occurrence = 1;
-                }
-            }
-        }
-        index += tokenLength;
-    }
-    currentFile->wordCount = num_toks;
+    return NULL;
 }
 
 //prints out linked list
 void printList(fileNode *head){   
     //first entry in the list is NULL
-    fileNode *ptr=head->next;
+    fileNode *ptr=head;
         while(ptr != NULL){   
             printf("\t%s\ttotal tokens:%d\n",ptr->path, ptr->wordCount);
             //print out wordlist
@@ -128,7 +116,7 @@ void printList(fileNode *head){
 }
 
 typedef struct _threadArg {
-    char path[256];
+    char* path;
     pthread_mutex_t* lock;
     fileNode* flist;
 } threadArg;
@@ -139,47 +127,38 @@ void* directory_handling( void* arg ){
         char* start_path = args->path;
         pthread_mutex_t* lock = args->lock;
         fileNode* fileList = args->flist;
-        //printf("handling dir %s\n", start_path);
+        free(arg);
         pthread_t threads[100];//change later, dont want this static, should find count of files/dirs first and then allocate that much space
-        int threadCount=0;
+        int threadCount = 0;
         struct dirent *pDirent;
         DIR *pDir;
         // Ensure we can open directory.
         pDir = opendir (start_path);
-        // Reading . and .. directories (throwing them away)
-        readdir(pDir);
-        readdir(pDir);
         if (pDir == NULL) {
             printf ("Cannot open directory '%s'\n", start_path);
             exit(0);
         }
+        // Reading . and .. directories (throwing them away)
+        readdir(pDir);
+        readdir(pDir);
         // Process each entry.
         while ((pDirent = readdir(pDir)) != NULL) {
-            if(pDirent->d_type == DT_DIR && pDirent->d_type != DT_REG ){
-                int pathlen = strlen(start_path) + 2 + strlen(pDirent->d_name);
-                char new_path[pathlen];
-                strcpy(new_path, start_path);
-                strcat(new_path, pDirent->d_name);
-                strcat(new_path, "/");
-                new_path[pathlen-1] = '\0';
-                threadArg* threadArgs = (threadArg*)malloc(sizeof(threadArg));
-                strcpy(threadArgs->path, new_path);
-                threadArgs->flist = fileList;
-                threadArgs->lock = lock;
-                pthread_create(&threads[threadCount++], NULL, directory_handling, (void*)threadArgs);
-                //directory_handling(threadArgs);
-            }else if(pDirent->d_type == DT_REG){
                 int pathlen = strlen(start_path) + 1 + strlen(pDirent->d_name);
-                char new_path[pathlen];
+                char* new_path = (char*)malloc(sizeof(char) * pathlen);
                 strcpy(new_path, start_path);
                 strcat(new_path, pDirent->d_name);
-                new_path[pathlen-1] = '\0';
                 threadArg* threadArgs = (threadArg*)malloc(sizeof(threadArg));
-                strcpy(threadArgs->path, new_path);
                 threadArgs->flist = fileList;
                 threadArgs->lock = lock;
-                pthread_create(&threads[threadCount++], NULL, file_handling, (void*)threadArgs);
-                // file_handling(threadArgs);
+                pthread_t* newThread = (pthread_t*)malloc(sizeof(pthread_t));
+                ++threadCount;
+            if(pDirent->d_type == DT_DIR && pDirent->d_type != DT_REG ){
+                strcat(new_path, "/");
+                threadArgs->path = new_path;
+                pthread_create(newThread, NULL, directory_handling, (void*)threadArgs);
+            }else if(pDirent->d_type == DT_REG){
+                threadArgs->path = new_path;
+                pthread_create(newThread, NULL, file_handling, (void*)threadArgs);
             }
         }
         // done spawning threads, join them all
@@ -188,7 +167,7 @@ void* directory_handling( void* arg ){
                 pthread_join(threads[j] ,NULL);
         }
         closedir (pDir);
-        // return(NULL);
+        free(start_path);
         pthread_exit(NULL);
 }
 //fills in probabilities for each work to occur on a file
@@ -200,33 +179,41 @@ void addProbabilities(fileNode* currentFile){
     }
 }
 
+fileNode* makeFile(char* path){
+    fileNode* newFile = (fileNode*)malloc(sizeof(fileNode));
+    newFile->path = path;
+    newFile->next = NULL;
+    newFile->wordList = NULL;
+    return newFile;
+}
+
 // does file_handling
 void *file_handling(void* arg){
     threadArg* args = (threadArg*)arg;
     char* filePath = args->path;
     pthread_mutex_t* lock = args->lock;
     fileNode* fileList = args->flist;
-    //initting current file
-    fileNode* currentFile = (fileNode*)malloc(sizeof(fileNode));
-    strcpy(currentFile->path, filePath);
-    currentFile->wordCount = 0;
-    currentFile->next = NULL;
-    currentFile->wordList = NULL;
+    free(args);
+    fileNode* curFile;
     //critical section, adding to main file list
     pthread_mutex_lock(lock);
-    //traverse until we find the last file in the list
-    fileNode* last = fileList;
-    while(last->next != NULL){
-        last = last->next;
+    if(fileList->path == NULL){
+        fileList->path = filePath;
+        fileList->wordList = NULL;
+        fileList->next = NULL;
+        curFile = fileList;
+    } else {
+        fileNode* last = fileList;
+        while(last->next != NULL){
+            last = last->next;
+        }
+        last->next = makeFile(filePath);
+        curFile = last->next;
     }
-    last->next = currentFile;
     pthread_mutex_unlock(lock);
     //end of critical section
-    char* fileContent = readInFile(currentFile);
-    if(fileContent != "DNE\0"){
-        word_tok(fileContent, currentFile);
-        addProbabilities(currentFile);
-    }
+    readInFile(curFile);
+    addProbabilities(curFile);
     pthread_exit(NULL);
 }
 //frees the filelist and each file's words
@@ -239,12 +226,13 @@ void cleanList(fileNode* fileList){
         while(currentWord != NULL){
             wordNode* prev = currentWord;
             currentWord = currentWord->next;
+            free(prev->text);
             free(prev);
         }
         free(currentWord);
-
         fileNode* prevFile = currentFile;
         currentFile = currentFile->next;
+        free(prevFile->path);
         free(prevFile);
     }
 }
@@ -255,23 +243,27 @@ int main(int argc,char *argv[]){
             exit(0);
         }
         //Beginning of file list
-        fileNode* flist = (fileNode*)malloc(sizeof(fileNode));
+        fileNode* flist = malloc(sizeof(fileNode));
+        flist->path = NULL;
         //Shared Lock
         pthread_mutex_t* lock = (pthread_mutex_t*)malloc(sizeof(pthread_mutex_t));
         pthread_mutex_init(lock, NULL);
-        char* startdir = argv[1];
+
+        char* startdir = (char*)malloc(sizeof(char) * strlen(argv[1]) + 2);
+        strcpy(startdir, argv[1]);
         strcat(startdir, "/");
+
         threadArg* arg = (threadArg*)malloc(sizeof(threadArg));
-        strcpy(arg->path, startdir);
+        arg->path = startdir;
         arg->lock = lock;
         arg->flist = flist;
+
         pthread_t mainThread;
         pthread_create(&mainThread, NULL, directory_handling, (void*)arg);
         pthread_join(mainThread, NULL);
         printList(flist);
 
         cleanList(flist);
-        free(flist);
         free(lock);
         
         return 0;
