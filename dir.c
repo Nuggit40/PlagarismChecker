@@ -18,33 +18,26 @@ void printList(fileNode* head);
 // reads file in and sets it to a buffer
 char* readInFile(fileNode* file)
 {
-    char* fileName = file->path;
-    char* buffer = (char* )(malloc(sizeof(char)));
-    buffer[0] = '\0';
-    char c;
-    int fd = open(fileName,O_RDONLY);
-    //printf("%s\n", strerror(errno));
-    int status;
-    int counter = 0;
-    if (fd!=-1){
-        do{
-                status =  read(fd, &c, 1);
-                if (status<=0){
-                    break;
-                }
-                else{   
-                    int len = strlen(buffer);
-                    buffer =  realloc(buffer,(len+ 2)*sizeof(char));
-                    buffer[len] = c;
-                    buffer[len+1] = '\0';
-                }
-            }while(status >0);
-            close(fd);
-        return buffer; 
+    int fd = open(file->path,O_RDONLY);
+    if(fd == -1){
+        printf("Cannot open the file %s\n", file->path);
+        return "DNE\0";
     }
-    printf("Cannot open the file %s\n", fileName);
-    char*dne = "DNE\0";
-    return dne;
+    int fileSize = lseek(fd, 0, SEEK_END);
+    //setting cursor to start of file
+    lseek(fd, 0, SEEK_SET);
+    char* buffer = (char*)malloc(sizeof(char) * fileSize);
+    int status;
+    int offset = 0;
+    do {
+        status = read(fd, buffer + offset, fileSize - offset);
+        if(status > 0 && status < fileSize){
+            offset += status;
+        }
+
+    } while (status > 0);
+    close(fd);
+    return buffer;
 }
 
 void swapWordData(wordNode* word1, wordNode* word2){
