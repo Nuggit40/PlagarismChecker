@@ -16,6 +16,7 @@ typedef struct _meanConstruction {
     double mean;
     struct _meanConstruction* next;
 } meanConstruction;
+
 void printList(fileNode *head){   
     //first entry in the list is NULL
     fileNode *ptr=head->next;
@@ -59,6 +60,24 @@ void getJensenProb(fileNode* file1, fileNode* file2){
     meanList=meanList->next;
     printList(meanList);
 
+}
+float getKLD(fileNode* file, meanConstruction* mean){
+        wordNode * currWord1=file->wordList;
+        meanConstruction* meanList=mean;
+        float kld;
+          // loop through the meanList, it should be in the same order as the wordList
+            while(meanList!=NULL){
+                //sum the kld of the mean and currWord1 stuff
+                kld+=(currWord1->probability*(log(currWord1->probability/meanList->mean)));
+                //move pointers to next position
+                currWord1=currWord1->next;
+                meanList=meanList->next;
+            }
+    return kld;
+}
+float getJensenDistance(float kld1,float kld2){
+    // does jensen distance
+    return (kld1+kld2)/2;
 }
 
 
