@@ -189,15 +189,13 @@ void* directory_handling( void* arg ){
                 threadArg* threadArgs = (threadArg*)malloc(sizeof(threadArg));
                 threadArgs->flist = fileList;
                 threadArgs->lock = lock;
-                pthread_t* newThread = (pthread_t*)malloc(sizeof(pthread_t));
-                ++threadCount;
             if(pDirent->d_type == DT_DIR && pDirent->d_type != DT_REG ){
                 strcat(new_path, "/");
                 threadArgs->path = new_path;
-                pthread_create(newThread, NULL, directory_handling, (void*)threadArgs);
+                pthread_create(&threads[threadCount++], NULL, directory_handling, (void*)threadArgs);
             }else if(pDirent->d_type == DT_REG){
                 threadArgs->path = new_path;
-                pthread_create(newThread, NULL, file_handling, (void*)threadArgs);
+                pthread_create(&threads[threadCount++], NULL, file_handling, (void*)threadArgs);
             }
         }
         // done spawning threads, join them all
