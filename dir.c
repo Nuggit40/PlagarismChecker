@@ -25,31 +25,56 @@ wordNode* makeWord(char* token){
     return newWord;
 }
 
+void printWL(wordNode* wn){
+    while(wn != NULL){
+        printf("\t\t%s\toccurrances:%d\tprob:%f\n", wn->text, wn->occurrence, wn->probability);
+        wn = wn->next;
+    }
+}
+
+void swapWords(wordNode* w1, wordNode* w2){
+    wordNode temp = *w1;
+    *w1 = *w2;
+    *w2 = temp;
+    w1->next = w2;
+}
+
 void addToken(fileNode* file, char* token){
     //discard empty tokens or tokens containing only spaces
     if (isspace(token[0]) || token[0] == '\0') return;
+
     ++file->wordCount;
+    
     if(file->wordList == NULL){
         //first word
         file->wordList = makeWord(token);
     } else {
         wordNode* last = file->wordList;
         while(last->next != NULL){
+            //increment occurrence if already in list
             if(strcmp(last->text, token) == 0){
                 ++last->occurrence;
                 break;
-            } else {
-                last = last->next;
             }
+            //create new word and swap if list is out of order
+            if(strcmp(last->text, token) > 0){
+                wordNode* newNode = makeWord(token);
+                swapWords(last, newNode);
+                break;
+            }
+            last = last->next;
         }
         if(last->next == NULL){
+            //checking last element in the list and swapping if applicable
             if(strcmp(last->text, token) == 0){
                 ++last->occurrence;
+            } else if(strcmp(last->text, token) > 0){
+                wordNode* newNode = makeWord(token);
+                swapWords(last, newNode);
             } else {
                 last->next = makeWord(token);
             }
         }
-        
     }
 }
 
@@ -59,7 +84,7 @@ char* readInFile(fileNode* file)
     int fd = open(file->path,O_RDONLY);
     if(fd == -1){
         printf("Cannot open the file %s\n", file->path);
-        return "DNE\0";
+        pthread_exit(NULL);
     }
     int fileSize = lseek(fd, 0, SEEK_END);
     //setting cursor to start of file
@@ -231,6 +256,11 @@ void *file_handling(void* arg){
     pthread_mutex_t* lock = args->lock;
     fileNode* fileList = args->flist;
     free(args);
+    int fd = open(filePath,O_RDONLY);
+    if(fd == -1) {
+        printf("Cannot open: %s", filePath);
+        pthread_exit(NULL);
+    }
     fileNode* curFile;
     //critical section, adding to main file list
     pthread_mutex_lock(lock);
@@ -288,6 +318,7 @@ int main(int argc,char *argv[]){
 
         char* startdir = (char*)malloc(sizeof(char) * strlen(argv[1]) + 2);
         strcpy(startdir, argv[1]);
+
         strcat(startdir, "/");
 
         threadArg* arg = (threadArg*)malloc(sizeof(threadArg));
@@ -298,6 +329,10 @@ int main(int argc,char *argv[]){
         pthread_t mainThread;
         pthread_create(&mainThread, NULL, directory_handling, (void*)arg);
         pthread_join(mainThread, NULL);
+
+        //do file analysis
+
+
         printList(flist);
         cleanList(flist);
         free(lock);
