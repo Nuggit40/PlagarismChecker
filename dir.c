@@ -249,6 +249,13 @@ fileNode* makeFile(char* path){
     return newFile;
 }
 
+void swapFiles(fileNode* f1, fileNode* f2){
+    fileNode temp = *f1;
+    *f1 = *f2;
+    *f2 = temp;
+    f1->next = f2;
+}
+
 // does file_handling
 void *file_handling(void* arg){
     threadArg* args = (threadArg*)arg;
@@ -256,31 +263,45 @@ void *file_handling(void* arg){
     pthread_mutex_t* lock = args->lock;
     fileNode* fileList = args->flist;
     free(args);
+
     int fd = open(filePath,O_RDONLY);
     if(fd == -1) {
         printf("Cannot open: %s", filePath);
         pthread_exit(NULL);
     }
-    fileNode* curFile;
+
+    fileNode* newFile = makeFile(filePath);
+    readInFile(newFile);
+    addProbabilities(newFile);
+
+    
     //critical section, adding to main file list
     pthread_mutex_lock(lock);
     if(fileList->path == NULL){
-        fileList->path = filePath;
-        fileList->wordList = NULL;
-        fileList->next = NULL;
-        curFile = fileList;
+        //first file in the list
+        *fileList = *newFile;
+        //filelist already has been malloc'd
+        free(newFile);
     } else {
         fileNode* last = fileList;
         while(last->next != NULL){
+            if(last->wordCount > newFile->wordCount){
+                swapFiles(last, newFile);
+                break;
+            }
             last = last->next;
         }
-        last->next = makeFile(filePath);
-        curFile = last->next;
+        if(last->next == NULL){
+            if(last->wordCount > newFile->wordCount){
+                swapFiles(last, newFile);
+            } else {
+                last->next = newFile;
+            }
+        }
     }
     pthread_mutex_unlock(lock);
     //end of critical section
-    readInFile(curFile);
-    addProbabilities(curFile);
+    
     pthread_exit(NULL);
 }
 //frees the filelist and each file's words
