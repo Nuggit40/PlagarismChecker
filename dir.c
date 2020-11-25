@@ -141,42 +141,45 @@ void printList(fileNode *head){
 }
 void printMeanList(meanConstruction *head){   
     //first entry in the list is NULL
-    meanConstruction *ptr=head->next;
+    meanConstruction *ptr=head;
         while(ptr != NULL){   
             printf("\t%s\tmean:%f\n",ptr->text, ptr->mean);
             ptr=ptr->next;    
         }
 }
-void getJensenProb(fileNode* file1, fileNode* file2){
-    wordNode * currWord1=file1->wordList;
-    wordNode*  currWord2=file2->wordList;
+meanConstruction* makeMean(char* text,int mean){
+    meanConstruction* newMean = (meanConstruction*)malloc(sizeof(meanConstruction));
+    newMean->text = text;
+    newMean->next = NULL;
+    newMean->mean = mean ;
+    return newMean;
+}
+void getJensenProb(fileNode* file1){
+    fileNode* file=file1;
+    wordNode * wordList1=file->wordList;
+    wordNode*  wordList2=file->next->wordList;
     meanConstruction* meanList = (meanConstruction*)malloc(sizeof(meanConstruction));
-    // first loop runs through second list given in
-    while(currWord2!=NULL ){
-        //second loop one by one compares the parts from the first list to the second list
-        while(currWord1!=NULL){
-            // checks if the second list is empty
-            if(currWord2 ==NULL){
-                    break;
-            }else if(currWord1->text==currWord2->text){ // checks to see if the they are the same word
-                meanList->text=currWord1->text;
-                meanList->mean=((currWord1->probability+currWord2->probability)/2);
-                currWord1=currWord1->next;
-                currWord2=currWord2->next;
-
-            }else{ //if word not in list 
-                meanList->text=currWord1->text;
-                meanList->mean=((currWord1->probability)/2);
-                currWord1=currWord1->next;
-                currWord2=currWord2->next;
+    meanConstruction* m=meanList;
+    
+    while(wordList1!=NULL){
+        m->next=makeMean(wordList1->text,(wordList1->probability/2));
+        wordList1=wordList1->next;
+        m=m->next;
+    }
+     while(wordList2!=NULL){
+        while(m!=NULL){
+            if(strcmp(m->text,wordList2->text)==0){
+                m->mean+=(wordList2->probability/2);
             }
         }
-        meanList=meanList->next;
+        m->next=makeMean(wordList2->text,(wordList2->probability/2));
+        wordList2=wordList2->next;
+        m=m->next;
     }
-    
-    printMeanList(meanList);
-
+    m=meanList;
+    printMeanList(m);
 }
+
 
 
 typedef struct _threadArg {
@@ -350,10 +353,9 @@ int main(int argc,char *argv[]){
         pthread_t mainThread;
         pthread_create(&mainThread, NULL, directory_handling, (void*)arg);
         pthread_join(mainThread, NULL);
-
-        //do file analysis
-
-
+        fileNode* f=flist;
+        //do analysis here
+        getJensenProb(f);
         printList(flist);
         cleanList(flist);
         free(lock);
