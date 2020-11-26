@@ -190,9 +190,9 @@ void getColor(float jsd){
         printf("%f ",jsd);
     }
 }
-void getJensenProb(fileNode* file){
+void getJensenProb(fileNode* file, fileNode* fn){
     wordNode* wl1 = file->wordList;
-    wordNode* wl2 = file->next->wordList;
+    wordNode* wl2 = fn->wordList;
     //adding first node and creating list
     meanConstruction* meanList = makeMean(wl1->text, (wl1->probability)/2);
     meanConstruction* m = meanList;
@@ -265,7 +265,6 @@ float getKLD(fileNode* file, meanConstruction* mean){
           // loop through the meanList, it should be in the same order as the wordList
             while(meanList!=NULL){
                 //sum the kld of the mean and currWord1 stuff
-                
                 i=(currWord1->probability)/(meanList->mean);
                 kld+=((currWord1->probability)*log10(i));
                 if(currWord1->next==NULL){
@@ -452,8 +451,24 @@ int main(int argc,char *argv[]){
         pthread_create(&mainThread, NULL, directory_handling, (void*)arg);
         pthread_join(mainThread, NULL);
         fileNode* f=flist;
+        fileNode* fn=flist->next;
         //do analysis here
-        getJensenProb(f);
+       while(f!=NULL){
+            while(fn!=NULL){
+                if(f==fn){
+                    break;
+                }
+                getJensenProb(f,fn);
+                if(fn->next==NULL){
+                    break;
+                }
+                fn=fn->next;
+            }
+            if(f->next==NULL){
+                    break;
+                }
+            f=f->next;
+        }
         printList(flist);
         cleanList(flist);
         free(lock);
