@@ -12,6 +12,14 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <math.h>
+
+#define CHANGE_RED printf("\033[0;31m");
+#define CHANGE_YELLOW printf("\033[0;33m");
+#define CHANGE_GREEN printf("\033[0;32m");
+#define CHANGE_CYAN printf("\033[0;36m");
+#define CHANGE_BLUE printf("\033[0;34m");
+#define RESET_COLOR printf("\033[0m");
+
 void* file_handling(void* arg);
 void* directory_handling(void* arg);
 void printList(fileNode* head); 
@@ -156,6 +164,32 @@ meanConstruction* makeMean(char* text,float mean){
     return newMean;
 }
 float getKLD(fileNode* file, meanConstruction* mean);
+
+void getColor(float jsd){
+    if(jsd>=0 && jsd<=0.1){
+        CHANGE_RED
+        printf("%f ",jsd);
+        RESET_COLOR;
+    }else if(jsd>0.1 && jsd<=0.15){
+        CHANGE_YELLOW
+        printf("%f ",jsd);
+        RESET_COLOR;
+    }else if(jsd>0.15 && jsd<=0.2){
+        CHANGE_GREEN
+        printf("%f ",jsd);
+        RESET_COLOR;
+    }else if(jsd>0.2 && jsd<=0.25){
+        CHANGE_CYAN
+        printf("%f ",jsd);
+        RESET_COLOR;
+    }else if(jsd>0.25 && jsd<=0.3){
+        CHANGE_BLUE
+        printf("%f ",jsd);
+        RESET_COLOR;
+    }else if(jsd>0.3){
+        printf("%f ",jsd);
+    }
+}
 void getJensenProb(fileNode* file){
     wordNode* wl1 = file->wordList;
     wordNode* wl2 = file->next->wordList;
@@ -217,7 +251,9 @@ void getJensenProb(fileNode* file){
     float j=getKLD(file,meanList);
     float f=getKLD(file->next,meanList);
     printf("%s KLD:%f\n",file->path,j);
-    printf("JSD:%f\n",f/2); //NUMBER NEEDED FOR JSD
+     //JSD (prints out final analyis between two)
+    getColor(f/2);
+    printf(" \"%s\" and \"%s\"\n",file->path,file->next->path);
 
 }
 float getKLD(fileNode* file, meanConstruction* mean){
@@ -228,24 +264,15 @@ float getKLD(fileNode* file, meanConstruction* mean){
         float i;
           // loop through the meanList, it should be in the same order as the wordList
             while(meanList!=NULL){
-                
-                
                 //sum the kld of the mean and currWord1 stuff
                 
                 i=(currWord1->probability)/(meanList->mean);
-                tmp=log10(i);
-               /* printf("Curr Prob %f -->I:%f----> TMP: %f\n",currWord1->probability,i,tmp);
-                 printf("Mean:%f\n",meanList->mean);
-                 printf("KLD bef: %f\n",currWord1->probability*log10(i));*/
                 kld+=((currWord1->probability)*log10(i));
-                //move pointers to next position
                 if(currWord1->next==NULL){
-                   
+                   printf("%s %f %f\n",currWord1->text,currWord1->probability, meanList->mean);
                     break;
-                }else{
-                
-                currWord1=currWord1->next;
                 }
+                currWord1=currWord1->next;
                 meanList=meanList->next;
             }
     return kld;
