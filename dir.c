@@ -160,9 +160,9 @@ void getJensenProb(fileNode* file){
     //adding first node and creating list
     meanConstruction* meanList = makeMean(wl1->text, (wl1->probability)/2);
     meanConstruction* m = meanList;
-    if(wl1->next != NULL){
-        wl1 = wl1->next;
-    }
+    
+    wl1 = wl1->next;
+    
     while(wl1 != NULL){
         //printf("%s, %f, %f\n",wl1->text, wl1->probability, wl1->probability/2);
         m->next = makeMean(wl1->text, (wl1->probability)/2.0);
@@ -182,7 +182,13 @@ void getJensenProb(fileNode* file){
         m = m->next;
     }
     if(m->next == NULL){
-        m->next = makeMean(wl2->text, (wl2->probability) / 2.0);
+        if(strcmp(wl2->text, m->text) == 0){
+            m->mean += (wl2->probability / 2.0);
+            
+        } else {
+            m->next = makeMean(wl2->text, (wl2->probability) / 2.0);
+        }
+        
     }
     wl2 = wl2->next;
     while(wl2 != NULL){
