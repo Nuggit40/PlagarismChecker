@@ -11,6 +11,15 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <math.h>
+
+#define CHANGE_RED printf("\033[0;31m");
+#define CHANGE_YELLOW printf("\033[0;33m");
+#define CHANGE_GREEN printf("\033[0;32m");
+#define CHANGE_CYAN printf("\033[0;36m");
+#define CHANGE_BLUE printf("\033[0;34m");
+#define RESET_COLOR printf("\033[0m");
+
 void* file_handling(void* arg);
 void* directory_handling(void* arg);
 void printList(fileNode* head); 
@@ -170,15 +179,42 @@ meanConstruction* makeMean(char* text,float mean){
     newMean->mean = mean ;
     return newMean;
 }
-void getJensenProb(fileNode* file){
+float getKLD(fileNode* file, meanConstruction* mean);
+
+void getColor(float jsd){
+    if(jsd>=0 && jsd<=0.1){
+        CHANGE_RED
+        printf("%f ",jsd);
+        RESET_COLOR;
+    }else if(jsd>0.1 && jsd<=0.15){
+        CHANGE_YELLOW
+        printf("%f ",jsd);
+        RESET_COLOR;
+    }else if(jsd>0.15 && jsd<=0.2){
+        CHANGE_GREEN
+        printf("%f ",jsd);
+        RESET_COLOR;
+    }else if(jsd>0.2 && jsd<=0.25){
+        CHANGE_CYAN
+        printf("%f ",jsd);
+        RESET_COLOR;
+    }else if(jsd>0.25 && jsd<=0.3){
+        CHANGE_BLUE
+        printf("%f ",jsd);
+        RESET_COLOR;
+    }else if(jsd>0.3){
+        printf("%f ",jsd);
+    }
+}
+void getJensenProb(fileNode* file, fileNode* fn){
     wordNode* wl1 = file->wordList;
-    wordNode* wl2 = file->next->wordList;
+    wordNode* wl2 = fn->wordList;
     //adding first node and creating list
     meanConstruction* meanList = makeMean(wl1->text, (wl1->probability)/2);
     meanConstruction* m = meanList;
-    
-    wl1 = wl1->next;
-    
+    if(wl1->next != NULL){
+        wl1 = wl1->next;
+    }
     while(wl1 != NULL){
         //printf("%s, %f, %f\n",wl1->text, wl1->probability, wl1->probability/2);
         m->next = makeMean(wl1->text, (wl1->probability)/2.0);
@@ -198,13 +234,7 @@ void getJensenProb(fileNode* file){
         m = m->next;
     }
     if(m->next == NULL){
-        if(strcmp(wl2->text, m->text) == 0){
-            m->mean += (wl2->probability / 2.0);
-            
-        } else {
-            m->next = makeMean(wl2->text, (wl2->probability) / 2.0);
-        }
-        
+        m->next = makeMean(wl2->text, (wl2->probability) / 2.0);
     }
     wl2 = wl2->next;
     while(wl2 != NULL){
@@ -234,8 +264,37 @@ void getJensenProb(fileNode* file){
     
     printf("ML after wl2\n");
     printMeanList(meanList);
+    float j=getKLD(file,meanList);
+    float f=getKLD(file->next,meanList);
+    printf("%s KLD:%f\n",file->path,j);
+     //JSD (prints out final analyis between two)
+    getColor(f/2);
+    printf(" \"%s\" and \"%s\"\n",file->path,file->next->path);
 
 }
+float getKLD(fileNode* file, meanConstruction* mean){
+        wordNode * currWord1=file->wordList;
+        meanConstruction* meanList=mean;
+        float kld;
+        float tmp;
+        float i;
+          // loop through the meanList, it should be in the same order as the wordList
+            while(meanList!=NULL){
+                //sum the kld of the mean and currWord1 stuff
+                i=(currWord1->probability)/(meanList->mean);
+                kld+=((currWord1->probability)*log10(i));
+                if(currWord1->next==NULL){
+                   printf("%s %f %f\n",currWord1->text,currWord1->probability, meanList->mean);
+                    break;
+                }
+                currWord1=currWord1->next;
+                meanList=meanList->next;
+            }
+    return kld;
+}
+
+
+
 typedef struct _threadArg {
     char* path;
     pthread_mutex_t* lock;
@@ -408,8 +467,24 @@ int main(int argc,char *argv[]){
         pthread_create(&mainThread, NULL, directory_handling, (void*)arg);
         pthread_join(mainThread, NULL);
         fileNode* f=flist;
+        fileNode* fn=flist->next;
         //do analysis here
-        getJensenProb(f);
+       while(f!=NULL){
+            while(fn!=NULL){
+                if(f==fn){
+                    break;
+                }
+                getJensenProb(f,fn);
+                if(fn->next==NULL){
+                    break;
+                }
+                fn=fn->next;
+            }
+            if(f->next==NULL){
+                    break;
+                }
+            f=f->next;
+        }
         printList(flist);
         cleanList(flist);
         free(lock);
