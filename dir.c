@@ -282,7 +282,7 @@ float getKLD(fileNode* file, meanConstruction* mean){
             while(meanList!=NULL){
                 //sum the kld of the mean and currWord1 stuff
                 i=(currWord1->probability)/(meanList->mean);
-                kld+=((currWord1->probability)*log10(i));
+                //kld+=((currWord1->probability)*log10(i));
                 if(currWord1->next==NULL){
                    printf("%s %f %f\n",currWord1->text,currWord1->probability, meanList->mean);
                     break;
@@ -440,7 +440,30 @@ void cleanList(fileNode* fileList){
         free(prevFile);
     }
 }
+void fileAnalysis(fileNode* flist){
+    if(flist == NULL || flist->next == NULL){
+        //one file in list, nothing to compare to
+        printf("not enough files to analyze analyze\n");
+        return;
+    }
+    fileNode* f1 = flist;
+    fileNode* f2 = flist->next;
+    while(f1 != NULL){
+        while(f2 != NULL){
+            printf("computing: %s, %s\n", f1->path, f2->path);
+            //getJensenProb(f1, f2);
+            f2 = f2->next;
+        }
+        f1 = f1->next;
+        if(f1->next != NULL){
+            f2 = f1->next;
+        } else {
+            break;
+        }
+        
+    }
 
+}
 int main(int argc,char *argv[]){
         if (argc != 2) {
             printf ("Provide Directory Please\n");
@@ -466,25 +489,24 @@ int main(int argc,char *argv[]){
         pthread_t mainThread;
         pthread_create(&mainThread, NULL, directory_handling, (void*)arg);
         pthread_join(mainThread, NULL);
-        fileNode* f=flist;
-        fileNode* fn=flist->next;
+        fileAnalysis(flist);
         //do analysis here
-       while(f!=NULL){
-            while(fn!=NULL){
-                if(f==fn){
-                    break;
-                }
-                getJensenProb(f,fn);
-                if(fn->next==NULL){
-                    break;
-                }
-                fn=fn->next;
-            }
-            if(f->next==NULL){
-                    break;
-                }
-            f=f->next;
-        }
+    //    while(f!=NULL){
+    //         while(fn!=NULL){
+    //             if(f==fn){
+    //                 break;
+    //             }
+    //             getJensenProb(f,fn);
+    //             if(fn->next==NULL){
+    //                 break;
+    //             }
+    //             fn=fn->next;
+    //         }
+    //         if(f->next==NULL){
+    //                 break;
+    //             }
+    //         f=f->next;
+    //     }
         printList(flist);
         cleanList(flist);
         free(lock);
