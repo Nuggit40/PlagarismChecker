@@ -14,7 +14,7 @@
 void* file_handling(void* arg);
 void* directory_handling(void* arg);
 void printList(fileNode* head); 
-
+//constructs and allocates memory for a new wordNode
 wordNode* makeWord(char* token){
     wordNode* newWord = (wordNode*)malloc(sizeof(wordNode));
     newWord->occurrence = 1;
@@ -24,24 +24,35 @@ wordNode* makeWord(char* token){
     newWord->next = NULL;
     return newWord;
 }
-
+//prints a wordlist for debugging
 void printWL(wordNode* wn){
     while(wn != NULL){
         printf("\t\t%s\toccurrances:%d\tprob:%f\n", wn->text, wn->occurrence, wn->probability);
         wn = wn->next;
     }
 }
-
+//swaps the position of two wordNodes in a linked-list
 void swapWords(wordNode* w1, wordNode* w2){
     wordNode temp = *w1;
     *w1 = *w2;
     *w2 = temp;
     w1->next = w2;
 }
-
+//removes the specified character in a string
+void removeChar(char* str, char garbage){
+    char *src, *dst;
+    for (src = dst = str; *src != '\0'; src++) {
+        *dst = *src;
+        if (*dst != garbage) dst++;
+    }
+    *dst = '\0';
+}
+//adds a token to a file's wordlist
 void addToken(fileNode* file, char* token){
     //discard empty tokens or tokens containing only spaces
     if (isspace(token[0]) || token[0] == '\0') return;
+    
+    removeChar(token, '\'');
 
     ++file->wordCount;
     
@@ -77,8 +88,8 @@ void addToken(fileNode* file, char* token){
         }
     }
 }
-
-// reads file in and sets it to a buffer
+//reads file in and sets it to a buffer
+//assumes that tokens will not be larger than 99 characters
 char* readInFile(fileNode* file)
 {
     int fd = open(file->path,O_RDONLY);
@@ -99,6 +110,10 @@ char* readInFile(fileNode* file)
         status = read(fd, &c, 1);
         if(status > 0){
             ++charCount;
+            //discard punctuation that is not part of tokens
+            if(ispunct(c) && c != '\'' && c != '-'){
+                continue;
+            }
             //make all chars lowercase
             c = tolower(c);
             //add the character to the current buffer
@@ -123,8 +138,7 @@ char* readInFile(fileNode* file)
     close(fd);
     return NULL;
 }
-
-//prints out linked list
+//prints out a filelist and each files wordlist
 void printList(fileNode *head){   
     //first entry in the list is NULL
     fileNode *ptr=head;
@@ -139,6 +153,7 @@ void printList(fileNode *head){
             ptr=ptr->next;    
         }
 }
+//prints out a meanConstruction linked-list
 void printMeanList(meanConstruction *head){   
     //first entry in the list is NULL
     meanConstruction *ptr=head;
@@ -147,6 +162,7 @@ void printMeanList(meanConstruction *head){
             ptr=ptr->next;    
         }
 }
+//constructs and allocates a new meanConstruction
 meanConstruction* makeMean(char* text,float mean){
     meanConstruction* newMean = (meanConstruction*)malloc(sizeof(meanConstruction));
     newMean->text = text;
@@ -220,9 +236,6 @@ void getJensenProb(fileNode* file){
     printMeanList(meanList);
 
 }
-
-
-
 typedef struct _threadArg {
     char* path;
     pthread_mutex_t* lock;
