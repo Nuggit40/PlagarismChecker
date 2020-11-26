@@ -18,7 +18,7 @@ typedef struct _fileNode {
 
 typedef struct _meanConstruction {
     char* text;
-    double mean;
+    float mean;
     struct _meanConstruction* next;
 } meanConstruction;
 

@@ -147,37 +147,72 @@ void printMeanList(meanConstruction *head){
             ptr=ptr->next;    
         }
 }
-meanConstruction* makeMean(char* text,int mean){
+meanConstruction* makeMean(char* text,float mean){
     meanConstruction* newMean = (meanConstruction*)malloc(sizeof(meanConstruction));
     newMean->text = text;
     newMean->next = NULL;
     newMean->mean = mean ;
     return newMean;
 }
-void getJensenProb(fileNode* file1){
-    fileNode* file=file1;
-    wordNode * wordList1=file->wordList;
-    wordNode*  wordList2=file->next->wordList;
-    meanConstruction* meanList = (meanConstruction*)malloc(sizeof(meanConstruction));
-    meanConstruction* m=meanList;
-    
-    while(wordList1!=NULL){
-        m->next=makeMean(wordList1->text,(wordList1->probability/2));
-        wordList1=wordList1->next;
-        m=m->next;
+void getJensenProb(fileNode* file){
+    wordNode* wl1 = file->wordList;
+    wordNode* wl2 = file->next->wordList;
+    //adding first node and creating list
+    meanConstruction* meanList = makeMean(wl1->text, (wl1->probability)/2);
+    meanConstruction* m = meanList;
+    if(wl1->next != NULL){
+        wl1 = wl1->next;
     }
-     while(wordList2!=NULL){
-        while(m!=NULL){
-            if(strcmp(m->text,wordList2->text)==0){
-                m->mean+=(wordList2->probability/2);
+    while(wl1 != NULL){
+        //printf("%s, %f, %f\n",wl1->text, wl1->probability, wl1->probability/2);
+        m->next = makeMean(wl1->text, (wl1->probability)/2.0);
+        wl1 = wl1->next;
+        m = m->next;
+    }
+    //reset m pointer
+    m = meanList;
+    printf("ML after wl1:\n");
+    printMeanList(meanList);
+    //checking first node of wl2
+    while(m->next != NULL){
+        if(strcmp(wl2->text, m->text) == 0){
+            m->mean += (wl2->probability / 2.0);
+            break;
+        }
+        m = m->next;
+    }
+    if(m->next == NULL){
+        m->next = makeMean(wl2->text, (wl2->probability) / 2.0);
+    }
+    wl2 = wl2->next;
+    while(wl2 != NULL){
+        char* curToken = wl2->text;
+        //iterate through meanlist and see if curToken is already there
+        while(m->next != NULL){
+            if(strcmp(curToken, m->text) == 0){
+                //found token
+                m->mean += (wl2->probability / 2.0);
+                break;
+            }
+            m = m->next;
+        }
+        //checking last item in list
+        if(m->next == NULL){
+            if(strcmp(curToken, m->text) == 0){
+                //found token
+                m->mean += (wl2->probability / 2.0);
+                break;
+            } else {
+                //end of list, add new node
+                m->next = makeMean(curToken, (wl2->probability) / 2.0);
             }
         }
-        m->next=makeMean(wordList2->text,(wordList2->probability/2));
-        wordList2=wordList2->next;
-        m=m->next;
+        wl2 = wl2->next;
     }
-    m=meanList;
-    printMeanList(m);
+    
+    printf("ML after wl2\n");
+    printMeanList(meanList);
+
 }
 
 
