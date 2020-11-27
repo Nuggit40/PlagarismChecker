@@ -206,25 +206,38 @@ void getColor(float jsd){
         printf("%f ",jsd);
     }
 }
+//deallocates memory taken by a meanlist
+void cleanMeanList(meanConstruction* meanList){
+    meanConstruction* current = meanList;
+    while(current != NULL){
+        meanConstruction* prev = current;
+        current = current->next;
+        free(prev);
+    }
+}
+//computes the Jensen-Shannon Distance between two files
 void getJensenProb(fileNode* file, fileNode* fn){
     wordNode* wl1 = file->wordList;
     wordNode* wl2 = fn->wordList;
+    //empty list, wl2 will be null as well if wl1 = NULL
+    if(wl1 == NULL){
+        return;    
+    }
     //adding first node and creating list
+    
     meanConstruction* meanList = makeMean(wl1->text, (wl1->probability)/2);
     meanConstruction* m = meanList;
+    
     if(wl1->next != NULL){
         wl1 = wl1->next;
     }
     while(wl1 != NULL){
-        //printf("%s, %f, %f\n",wl1->text, wl1->probability, wl1->probability/2);
         m->next = makeMean(wl1->text, (wl1->probability)/2.0);
         wl1 = wl1->next;
         m = m->next;
     }
     //reset m pointer
     m = meanList;
-    printf("ML after wl1:\n");
-    printMeanList(meanList);
     //checking first node of wl2
     while(m->next != NULL){
         if(strcmp(wl2->text, m->text) == 0){
@@ -261,39 +274,35 @@ void getJensenProb(fileNode* file, fileNode* fn){
         }
         wl2 = wl2->next;
     }
-    
-    printf("ML after wl2\n");
-    printMeanList(meanList);
     float j=getKLD(file,meanList);
-    float f=getKLD(file->next,meanList);
-    printf("%s KLD:%f\n",file->path,j);
-     //JSD (prints out final analyis between two)
-    getColor(f/2);
+    //printf("kld1:%f\n",j);
+    float f=getKLD(fn,meanList);
+    //printf("kld2:%f\n",f);
+    float jsd = (f+j) / 2;
+    //printf("jsd:%f\n", jsd);
+    //JSD (prints out final analyis between two)
+    getColor(jsd);
     printf(" \"%s\" and \"%s\"\n",file->path,file->next->path);
-
+    cleanMeanList(meanList);
 }
 float getKLD(fileNode* file, meanConstruction* mean){
-        wordNode * currWord1=file->wordList;
+        wordNode* wordList = file->wordList;
         meanConstruction* meanList=mean;
-        float kld;
-        float tmp;
-        float i;
-          // loop through the meanList, it should be in the same order as the wordList
+        float kld = 0;
+          // loop through the meanList, computing the probability of each word in the wordlist
             while(meanList!=NULL){
-                //sum the kld of the mean and currWord1 stuff
-                i=(currWord1->probability)/(meanList->mean);
-                //kld+=((currWord1->probability)*log10(i));
-                if(currWord1->next==NULL){
-                   printf("%s %f %f\n",currWord1->text,currWord1->probability, meanList->mean);
-                    break;
+                while(wordList != NULL){
+                    if(strcmp(wordList->text, meanList->text) == 0){
+                        kld += wordList->probability * log10(wordList->probability / meanList->mean);
+                        break;
+                    }
+                    wordList = wordList->next;
                 }
-                currWord1=currWord1->next;
-                meanList=meanList->next;
+                wordList = file->wordList;
+                meanList = meanList->next;\
             }
     return kld;
 }
-
-
 
 typedef struct _threadArg {
     char* path;
@@ -423,7 +432,7 @@ void *file_handling(void* arg){
 //frees the filelist and each file's words
 void cleanList(fileNode* fileList){
     //first element is NULL and gets freed at a later point
-    fileNode* currentFile = fileList->next;
+    fileNode* currentFile = fileList;
     while(currentFile != NULL){
         //free the wordlist of the current file
         wordNode* currentWord = currentFile->wordList;
@@ -443,15 +452,15 @@ void cleanList(fileNode* fileList){
 void fileAnalysis(fileNode* flist){
     if(flist == NULL || flist->next == NULL){
         //one file in list, nothing to compare to
-        printf("not enough files to analyze analyze\n");
+        printf("not enough files to analyze\n");
         return;
     }
     fileNode* f1 = flist;
     fileNode* f2 = flist->next;
     while(f1 != NULL){
         while(f2 != NULL){
-            printf("computing: %s, %s\n", f1->path, f2->path);
-            //getJensenProb(f1, f2);
+            //printf("computing: %s, %s\n", f1->path, f2->path);
+            getJensenProb(f1, f2);
             f2 = f2->next;
         }
         f1 = f1->next;
@@ -489,24 +498,9 @@ int main(int argc,char *argv[]){
         pthread_t mainThread;
         pthread_create(&mainThread, NULL, directory_handling, (void*)arg);
         pthread_join(mainThread, NULL);
+
         fileAnalysis(flist);
-        //do analysis here
-    //    while(f!=NULL){
-    //         while(fn!=NULL){
-    //             if(f==fn){
-    //                 break;
-    //             }
-    //             getJensenProb(f,fn);
-    //             if(fn->next==NULL){
-    //                 break;
-    //             }
-    //             fn=fn->next;
-    //         }
-    //         if(f->next==NULL){
-    //                 break;
-    //             }
-    //         f=f->next;
-    //     }
+
         printList(flist);
         cleanList(flist);
         free(lock);
