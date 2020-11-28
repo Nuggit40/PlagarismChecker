@@ -180,7 +180,7 @@ meanConstruction* makeMean(char* text,float mean){
     return newMean;
 }
 float getKLD(fileNode* file, meanConstruction* mean);
-
+//sets color to ouput text 
 void getColor(float jsd){
     if(jsd>=0 && jsd<=0.1){
         CHANGE_RED
@@ -282,6 +282,7 @@ void getJensenProb(fileNode* file, fileNode* fn){
     printf(" \"%s\" and \"%s\"\n",file->path,fn->path);
     cleanMeanList(meanList);
 }
+//Gets KLD and printout analysis
 float getKLD(fileNode* file, meanConstruction* mean){
         wordNode* wordList = file->wordList;
         meanConstruction* meanList=mean;
@@ -301,6 +302,7 @@ float getKLD(fileNode* file, meanConstruction* mean){
     return kld;
 }
 
+//struct construct for thread initilization
 typedef struct _threadArg {
     char* path;
     pthread_mutex_t* lock;
@@ -362,7 +364,7 @@ void addProbabilities(fileNode* currentFile){
         curWord = curWord->next;
     }
 }
-
+// Creates a new file Node
 fileNode* makeFile(char* path){
     fileNode* newFile = (fileNode*)malloc(sizeof(fileNode));
     newFile->path = path;
@@ -370,7 +372,7 @@ fileNode* makeFile(char* path){
     newFile->wordList = NULL;
     return newFile;
 }
-
+//Swaps files in the linked list if order is wrong
 void swapFiles(fileNode* f1, fileNode* f2){
     fileNode temp = *f1;
     *f1 = *f2;
@@ -446,6 +448,7 @@ void cleanList(fileNode* fileList){
         free(prevFile);
     }
 }
+// Does the comparisons with all files found
 void fileAnalysis(fileNode* flist){
     if(flist == NULL || flist->next == NULL){
         //one file in list, nothing to compare to
