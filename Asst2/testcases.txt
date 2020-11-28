@@ -1,0 +1,93 @@
+
+Test Case 1:
+------------
+
+    tmp
+        ->file.txt (EMPTY)
+    
+In this test case, we passed a directory with an empty file to see how the program reacted and printed.
+The code should respond with an error.
+
+The result was as follows:
+-------------------------
+
+not enough files to analyze
+
+_________________________________________________________________________________________________________
+
+Test Case 2:
+------------
+
+    tmp
+        ->
+
+In this case we passed an empty directory to see how the code would react.
+It should return an error.
+
+The result was as follows:
+--------------------------
+not enough files to analyze
+
+_________________________________________________________________________________________________________
+
+Test Case 3:
+------------
+
+    tmp3 
+        -> file.txt
+            " hi there"
+        tmp
+            -> g.txt
+                "hi hi out there"
+
+This test case tests a file and a directory inside a directory, with a file inside the the second directory (tmp1).
+The code should give the statistics and the probabilites.
+
+The result was as follows:  
+--------------------------
+0.046852  "tmp3/file.txt" and "tmp3/tmp/g.txt"
+
+_________________________________________________________________________________________________________
+
+Test Case 4:
+------------
+
+
+tmp4
+    ->file.txt  
+        "An apple is an edible fruit produced by an apple tree"
+    tmp 
+        ->g.txt
+            "An apple is an edible fruit produced"
+        tm
+            ->c.txt
+                "An apple is an edible fruit"
+
+This test cases passed a directory with 3 files and 3 directories in a cascading order. The file content
+is similar and it tests the codes ability to work with multiple files.
+
+
+The result was as follows:  
+--------------------------
+0.001194  "tmp4/tmp/tm/c.txt" and "tmp4/tmp/g.txt"
+0.304308  "tmp4/tmp/tm/c.txt" and "tmp4/file.txt"
+0.329785  "tmp4/tmp/g.txt" and "tmp4/file.txt"
+
+_________________________________________________________________________________________________________
+
+Test Case 5:
+------------
+
+    tmp5
+        ->file.txt
+            "hhhh gggg"
+
+    This test case tests when there is one directory and one file with tokens.
+    
+
+    The result was as follows:  
+    -------------------------
+
+    not enough files to analyze
+	
+_________________________________________________________________________________________________________
