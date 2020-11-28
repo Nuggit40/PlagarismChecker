@@ -482,7 +482,6 @@ void fileAnalysis(fileNode* flist){
     fileNode* f1 = flist;
     fileNode* f2 = flist->next;
     while(f1 != NULL){
-        //if(f1->wordCount == 0) break;
         while(f2 != NULL){
             //printf("computing: %s, %s\n", f1->path, f2->path);
             getJensenProb(f1, f2);
@@ -526,7 +525,7 @@ int main(int argc,char *argv[]){
 
         fileAnalysis(flist);
 
-        printList(flist);
+        //printList(flist);
         cleanList(flist);
         free(lock);
         
