@@ -219,12 +219,36 @@ void cleanMeanList(meanConstruction* meanList){
 void getJensenProb(fileNode* file, fileNode* fn){
     wordNode* wl1 = file->wordList;
     wordNode* wl2 = fn->wordList;
-    if(wl1 == NULL) return;
+    if(wl2 == NULL){
+        //if wl2 == NULL then wl1 == NULL, jsd = 0
+        getColor(0.0);
+        printf(" \"%s\" and \"%s\"\n",file->path,fn->path);
+        return;
+    }
+    if(wl1 == NULL && wl2 != NULL){
+        //construct a meanlist only of wl2
+        meanConstruction* meanList = makeMean(wl2->text, (wl2->probability)/2);
+        meanConstruction* m = meanList;
+        if(wl2->next != NULL){
+            wl2 = wl2->next;
+        }
+        while(wl2 != NULL){
+            m->next = makeMean(wl2->text, (wl2->probability)/2.0);
+            wl2 = wl2->next;
+            m = m->next;
+        }
+        float j=getKLD(file,meanList);
+        float f=getKLD(fn,meanList);
+        float jsd = (f+j) / 2;
+        getColor(jsd);
+        printf(" \"%s\" and \"%s\"\n",file->path,fn->path);
+        cleanMeanList(meanList);
+        return;
+    }
     //adding first node and creating list
     
     meanConstruction* meanList = makeMean(wl1->text, (wl1->probability)/2);
     meanConstruction* m = meanList;
-    
     if(wl1->next != NULL){
         wl1 = wl1->next;
     }
